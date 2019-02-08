@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
 
-abstract class Node(config: Config) extends AutoCloseable {
+abstract class Node(val config: Config) extends AutoCloseable {
   lazy val log: LoggerFacade =
     LoggerFacade(LoggerFactory.getLogger(s"${getClass.getCanonicalName}.${this.name}"))
 

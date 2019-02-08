@@ -138,9 +138,9 @@ abstract class Caches(spendableBalanceChanged: Observer[(Address, Option[AssetId
   }
 
   private val balancesCache: LoadingCache[(Address, Option[AssetId]), java.lang.Long] =
-    observedCache(maxCacheSize * 16, spendableBalanceChanged, loadBalance)
-  protected def discardBalance(key: (Address, Option[AssetId]))               = balancesCache.invalidate(key)
-  override def balance(address: Address, mayBeAssetId: Option[AssetId]): Long = balancesCache.get(address -> mayBeAssetId)
+    observedCache(maxCacheSize * 16, spendableBalanceChanged,loadBalance)
+  protected def discardBalance(key: (Address, Option[AssetId])): Unit                 = balancesCache.invalidate(key)
+  override def balance(address: Address, mayBeAssetId: Option[AssetId]): Long         = balancesCache.get(address -> mayBeAssetId)
   protected def loadBalance(req: (Address, Option[AssetId])): Long
 
   private val assetDescriptionCache: LoadingCache[AssetId, Option[AssetDescription]] = cache(maxCacheSize, loadAssetDescription)
@@ -207,7 +207,7 @@ abstract class Caches(spendableBalanceChanged: Observer[(Address, Option[AssetId
                          aliases: Map[Alias, BigInt],
                          sponsorship: Map[AssetId, Sponsorship]): Unit
 
-  override def append(diff: Diff, carryFee: Long, block: Block): Unit = {
+  def append(diff: Diff, carryFee: Long, block: Block): Unit = {
     val newHeight = current._1 + 1
 
     val newAddresses = Set.newBuilder[Address]
@@ -237,7 +237,7 @@ abstract class Caches(spendableBalanceChanged: Observer[(Address, Option[AssetId
     for ((address, portfolioDiff) <- diff.portfolios) {
       val aid = addressId(address)
       if (portfolioDiff.balance != 0) {
-        val wbalance = (portfolioDiff.balance + balance(address, None))
+        val wbalance = portfolioDiff.balance + balance(address, None)
         wavesBalances += aid           -> wbalance
         newBalances += (address, None) -> wbalance
       }
@@ -324,7 +324,7 @@ abstract class Caches(spendableBalanceChanged: Observer[(Address, Option[AssetId
 
   protected def doRollback(targetBlockId: ByteStr): Seq[Block]
 
-  override def rollbackTo(targetBlockId: ByteStr): Either[String, Seq[Block]] = {
+  def rollbackTo(targetBlockId: ByteStr): Either[String, Seq[Block]] = {
     for {
       height <- heightOf(targetBlockId)
         .toRight(s"No block with signature: $targetBlockId found in blockchain")

@@ -16,4 +16,4 @@ Compile / run / javaOptions ++= Seq(
   s"-Dlogback.configurationFile=${(Compile / resourceDirectory).value / "logback.xml"}"
 )
 
-libraryDependencies ++= Dependencies.scodec.value
+libraryDependencies += "org.scodec" %% "scodec-core" % "1.10.3"

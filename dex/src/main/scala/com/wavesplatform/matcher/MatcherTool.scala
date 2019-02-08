@@ -77,13 +77,14 @@ object MatcherTool extends ScorexLogging {
   def main(args: Array[String]): Unit = {
     log.info(s"OK, engine start")
 
-    val userConfig   = args.headOption.fold(ConfigFactory.empty())(f => ConfigFactory.parseFile(new File(f)))
-    val actualConfig = loadConfig(userConfig)
-    val settings     = WavesSettings.fromConfig(actualConfig)
-    val db           = openDB(settings.matcherSettings.dataDir)
+    val userConfig                   = args.headOption.fold(ConfigFactory.empty())(f => ConfigFactory.parseFile(new File(f)))
+    val actualConfig                 = loadConfig(userConfig)
+    val wavesSettings: WavesSettings = ???
+    val settings: MatcherSettings    = ???
+    val db                           = openDB(settings.dataDir)
 
     AddressScheme.current = new AddressScheme {
-      override val chainId: Byte = settings.blockchainSettings.addressSchemeCharacter.toByte
+      override val chainId: Byte = wavesSettings.blockchainSettings.addressSchemeCharacter.toByte
     }
 
     val start = System.currentTimeMillis()
@@ -94,7 +95,7 @@ object MatcherTool extends ScorexLogging {
         val system = ActorSystem("matcher-tool", actualConfig)
         val se     = SerializationExtension(system)
         try {
-          val snapshotDB    = openDB(settings.matcherSettings.snapshotsDataDir)
+          val snapshotDB    = openDB(settings.snapshotsDataDir)
           val persistenceId = OrderBookActor.name(pair)
 
           val historyKey = MatcherSnapshotStore.kSMHistory(persistenceId)
@@ -139,7 +140,7 @@ object MatcherTool extends ScorexLogging {
       case "mar" =>
         val system = ActorSystem("matcher-tool", actualConfig)
         try {
-          val snapshotDB    = openDB(settings.matcherSettings.snapshotsDataDir)
+          val snapshotDB    = openDB(settings.snapshotsDataDir)
           val persistenceId = MatcherActor.name
 
           val historyKey = MatcherSnapshotStore.kSMHistory(persistenceId)

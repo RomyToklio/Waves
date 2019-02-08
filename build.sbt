@@ -243,7 +243,7 @@ lazy val common = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .disablePlugins(ProtocPlugin)
   .settings(
-    libraryDependencies ++= Dependencies.scalatest
+    libraryDependencies += Dependencies.scalatest
   )
 
 lazy val commonJS  = common.js
@@ -262,25 +262,25 @@ lazy val lang =
       addCompilerPlugin(Dependencies.kindProjector),
       addCompilerPlugin(Dependencies.betterFor),
       libraryDependencies ++=
-        Dependencies.cats ++
-          Dependencies.fp ++
-          Dependencies.scalacheck ++
-          Dependencies.scorex ++
-          Dependencies.scalatest ++
-          Dependencies.scalactic ++
-          Dependencies.monix.value ++
-          Dependencies.fastparse.value,
+        Seq(
+          // defined here because %%% can only be used within a task or setting macro
+          // exclusion and explicit dependency can likely be removed when monix 3 is released
+          ("io.monix" %%% "monix" % "3.0.0-RC1")
+            .exclude("org.typelevel", "cats-effect_2.12"),
+          "org.typelevel" %%% "cats-core"   % "1.1.0",
+          "org.rudogma"   %%% "supertagged" % "1.4",
+          "com.chuusai"   %%% "shapeless"   % "2.3.3",
+          "com.lihaoyi"   %%% "fastparse"   % "1.0.0"
+        ) ++
+          Dependencies.common ++
+          Dependencies.test,
       resolvers += Resolver.bintrayIvyRepo("portable-scala", "sbt-plugins"),
       resolvers += Resolver.sbtPluginRepo("releases")
     )
     .jsSettings(
       scalaJSLinkerConfig ~= {
         _.withModuleKind(ModuleKind.CommonJSModule)
-      },
-      libraryDependencies ++= Seq(
-        "org.rudogma" %%% "supertagged" % "1.4",
-        "com.chuusai" %%% "shapeless"   % "2.3.3"
-      )
+      }
     )
     .jvmSettings(
       coverageExcludedPackages := "",
@@ -297,11 +297,11 @@ lazy val lang =
       organizationHomepage := Some(url("https://wavesplatform.com")),
       scmInfo := Some(ScmInfo(url("https://github.com/wavesplatform/Waves"), "git@github.com:wavesplatform/Waves.git", None)),
       developers := List(Developer("petermz", "Peter Zhelezniakov", "peterz@rambler.ru", url("https://wavesplatform.com"))),
-      libraryDependencies ++= Dependencies.meta ++
+      libraryDependencies ++=
         Seq(
           "org.scala-js"                      %% "scalajs-stubs" % "1.0.0-RC1" % "provided",
-          "com.github.spullara.mustache.java" % "compiler" % "0.9.5"
-        ) ++ Dependencies.logging.map(_       % "test") // scrypto logs an error if a signature verification was failed
+          "com.github.spullara.mustache.java" % "compiler"       % "0.9.5"
+        )
     )
 
 lazy val langJS  = lang.js.dependsOn(commonJS)
@@ -312,45 +312,26 @@ lazy val node = project
   .settings(
     addCompilerPlugin(Dependencies.kindProjector),
     coverageExcludedPackages := "",
-    libraryDependencies ++=
-      Dependencies.network ++
-        Dependencies.db ++
-        Dependencies.http ++
-        Dependencies.akka ++
-        Dependencies.serialization ++
-        Dependencies.testKit.map(_ % Test) ++
-        Dependencies.logging ++
-        Dependencies.matcher ++
-        Dependencies.metrics ++
-        Dependencies.fp ++
-        Dependencies.meta ++
-        Dependencies.ficus ++
-        Dependencies.scorex ++
-        Dependencies.commons_net ++
-        Dependencies.monix.value ++
-        Dependencies.protobuf.value ++
-        Dependencies.grpc,
-    dependencyOverrides ++= Seq(
-      Dependencies.AkkaActor,
-      Dependencies.AkkaStream,
-      Dependencies.AkkaHTTP
-    )
+    libraryDependencies ++= Dependencies.node
   )
   .dependsOn(langJVM, commonJVM)
 
-///lazy val discovery = project
+///lazy val dex = project
+  .dependsOn(node % "provided->compile;test->test")
 
 lazy val it = project
-  .dependsOn(node)
+  .dependsOn(node, dex)
 
 lazy val generator = project
   .dependsOn(it)
   .settings(libraryDependencies += "com.github.scopt" %% "scopt" % "3.6.0")
 
-lazy val benchmark = project
-  .enablePlugins(JmhPlugin)
-  .dependsOn(node % "compile->compile;test->test", langJVM % "compile->compile;test->test")
-
 lazy val dexgenerator = project
   .dependsOn(it)
   .settings(libraryDependencies += "com.github.scopt" %% "scopt" % "3.6.0")
+
+lazy val discovery = project
+
+lazy val benchmark = project
+  .enablePlugins(JmhPlugin)
+  .dependsOn(node % "compile->compile;test->test", langJVM % "compile->compile;test->test")

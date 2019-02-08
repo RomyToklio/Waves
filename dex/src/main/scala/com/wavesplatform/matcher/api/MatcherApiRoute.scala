@@ -18,9 +18,9 @@ import com.wavesplatform.matcher.market.MatcherActor.{GetMarkets, GetSnapshotOff
 import com.wavesplatform.matcher.market.OrderBookActor._
 import com.wavesplatform.matcher.model._
 import com.wavesplatform.matcher.queue.{QueueEvent, QueueEventWithMeta}
-import com.wavesplatform.matcher.{AddressActor, AssetPairBuilder, Matcher}
+import com.wavesplatform.matcher.{AddressActor, AssetPairBuilder, Matcher, MatcherSettings}
 import com.wavesplatform.metrics.TimerExt
-import com.wavesplatform.settings.{RestAPISettings, WavesSettings}
+import com.wavesplatform.settings.RestAPISettings
 import com.wavesplatform.transaction.AssetId
 import com.wavesplatform.transaction.assets.exchange.OrderJson._
 import com.wavesplatform.transaction.assets.exchange.{AssetPair, Order}
@@ -48,7 +48,7 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
                            getMarketStatus: AssetPair => Option[MarketStatus],
                            orderValidator: Order => Either[String, Order],
                            orderBookSnapshot: OrderBookSnapshotHttpCache,
-                           wavesSettings: WavesSettings,
+                           matcherSettings: MatcherSettings,
                            matcherStatus: () => Matcher.Status,
                            db: DB,
                            time: Time,
@@ -58,9 +58,8 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
 
   import MatcherApiRoute._
   import PathMatchers._
-  import wavesSettings._
 
-  override val settings: RestAPISettings = restAPISettings
+  override val settings: RestAPISettings = ???
 
   private val timer      = Kamon.timer("matcher.api-requests")
   private val placeTimer = timer.refine("action" -> "place")

@@ -1,7 +1,6 @@
 package com.wavesplatform.transaction
 
 import com.wavesplatform.common.state.ByteStr
-import com.wavesplatform.matcher.ValidationMatcher
 import com.wavesplatform.state.diffs._
 import com.wavesplatform.transaction.assets.exchange.OrderOps._
 import com.wavesplatform.transaction.assets.exchange.{AssetPair, Order, OrderType, _}
