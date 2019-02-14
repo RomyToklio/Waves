@@ -1,7 +1,6 @@
 import com.typesafe.sbt.packager.archetypes.TemplateWriter
-import sbt.Keys.{sourceGenerators, _}
+import sbt.Keys._
 import sbt._
-import sbt.internal.inc.ReflectUtilities
 import sbtassembly.MergeStrategy
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
 
@@ -49,6 +48,7 @@ inThisBuild(
     scalaVersion := "2.12.8",
     organization := "com.wavesplatform",
     crossPaths := false,
+    dependencyOverrides ++= Dependencies.EnforcedVersions.value,
     scalacOptions ++= Seq("-feature",
                           "-deprecation",
                           "-language:higherKinds",
@@ -214,11 +214,6 @@ commands += Command.command("packageAll") { state =>
   "clean" :: "assembly" :: "debian:packageBin" :: state
 }
 
-// https://stackoverflow.com/a/48592704/4050580
-def allProjects: List[ProjectReference] = ReflectUtilities.allVals[Project](this).values.toList map { p =>
-  p: ProjectReference
-}
-
 addCommandAlias(
   "checkPR",
   // set scalacOptions in ThisBuild ++= Seq("-Xfatal-warnings");
@@ -231,7 +226,7 @@ addCommandAlias(
 lazy val checkPRRaw = taskKey[Unit]("Build a project and run unit tests")
 checkPRRaw in Global := {
   try {
-    clean.all(ScopeFilter(inProjects(allProjects: _*), inConfigurations(Compile))).value
+    clean.all(ScopeFilter(inAnyProject)).value
   } finally {
     test.all(ScopeFilter(inProjects(langJVM, node, commonJVM), inConfigurations(Test))).value
     (langJS / Compile / fastOptJS).value
@@ -243,7 +238,7 @@ lazy val common = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .disablePlugins(ProtocPlugin)
   .settings(
-    libraryDependencies += Dependencies.scalatest
+    libraryDependencies += Dependencies.ScalaTest % "test"
   )
 
 lazy val commonJS  = common.js
@@ -253,27 +248,14 @@ lazy val lang =
   crossProject(JSPlatform, JVMPlatform)
     .withoutSuffixFor(JVMPlatform)
     .disablePlugins(ProtocPlugin)
+    .dependsOn(common % "compile->compile;test->test")
     .settings(
       version := "1.0.0",
       coverageExcludedPackages := ".*",
-      // the following line forces scala version across all dependencies
-      scalaModuleInfo ~= (_.map(_.withOverrideScalaVersion(true))),
       test in assembly := {},
-      addCompilerPlugin(Dependencies.kindProjector),
-      addCompilerPlugin(Dependencies.betterFor),
       libraryDependencies ++=
-        Seq(
-          // defined here because %%% can only be used within a task or setting macro
-          // exclusion and explicit dependency can likely be removed when monix 3 is released
-          ("io.monix" %%% "monix" % "3.0.0-RC1")
-            .exclude("org.typelevel", "cats-effect_2.12"),
-          "org.typelevel" %%% "cats-core"   % "1.1.0",
-          "org.rudogma"   %%% "supertagged" % "1.4",
-          "com.chuusai"   %%% "shapeless"   % "2.3.3",
-          "com.lihaoyi"   %%% "fastparse"   % "1.0.0"
-        ) ++
-          Dependencies.common ++
-          Dependencies.test,
+        Dependencies.Lang.value ++
+          Dependencies.Test,
       resolvers += Resolver.bintrayIvyRepo("portable-scala", "sbt-plugins"),
       resolvers += Resolver.sbtPluginRepo("releases")
     )
@@ -304,33 +286,34 @@ lazy val lang =
         )
     )
 
-lazy val langJS  = lang.js.dependsOn(commonJS)
-lazy val langJVM = lang.jvm.dependsOn(commonJVM)
+lazy val langJS  = lang.js
+lazy val langJVM = lang.jvm
 
 lazy val node = project
   .in(file("."))
   .settings(
-    addCompilerPlugin(Dependencies.kindProjector),
     coverageExcludedPackages := "",
-    libraryDependencies ++= Dependencies.node
+    libraryDependencies ++= Dependencies.Node.value
   )
-  .dependsOn(langJVM, commonJVM)
+  .dependsOn(langJVM % "compile->compile;test->test", commonJVM % "compile->compile;test->test")
 
 ///lazy val dex = project
-  .dependsOn(node % "provided->compile;test->test")
+  .dependsOn(node % "compile->compile;runtime->provided;test->test")
 
 lazy val it = project
   .dependsOn(node, dex)
 
 lazy val generator = project
   .dependsOn(it)
-  .settings(libraryDependencies += "com.github.scopt" %% "scopt" % "3.6.0")
+  .settings(
+    libraryDependencies += "com.github.scopt" %% "scopt" % "3.6.0"
+  )
 
 lazy val dexgenerator = project
   .dependsOn(it)
-  .settings(libraryDependencies += "com.github.scopt" %% "scopt" % "3.6.0")
-
-lazy val discovery = project
+  .settings(
+    libraryDependencies += "com.github.scopt" %% "scopt" % "3.6.0"
+  )
 
 lazy val benchmark = project
   .enablePlugins(JmhPlugin)

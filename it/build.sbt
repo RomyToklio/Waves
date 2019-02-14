@@ -49,6 +49,8 @@ inTask(docker)(
 
 libraryDependencies ++= Dependencies.itKit
 
+dependencyOverrides ++= Dependencies.EnforcedVersions.value
+
 val logDirectory = Def.task {
   val runId = Option(System.getenv("RUN_ID")).getOrElse {
     val formatter = DateTimeFormatter.ofPattern("MM-dd--HH_mm_ss")

@@ -269,16 +269,16 @@ class Application(val actorSystem: ActorSystem, val settings: WavesSettings, con
 
     extensions = settings.extensions.map { extensionClassName =>
       val extensionClass = Class.forName(extensionClassName).asInstanceOf[Class[Extension]]
-      val ctor = extensionClass.getConstructor(classOf[Context])
+      val ctor           = extensionClass.getConstructor(classOf[Context])
       ctor.newInstance(new Context {
-        override def settings                                                                = ???
-        override def blockchain                                                              = ???
-        override def time                                                                    = ???
-        override def wallet                                                                  = ???
-        override def portfolioChanges                                                        = ???
+        override def settings                               = ???
+        override def blockchain                             = ???
+        override def time                                   = ???
+        override def wallet                                 = ???
+        override def portfolioChanges                       = ???
         override def pessimisticPortfolio(address: Address) = ???
-        override def addToUtx(tx: Transaction): Unit    = ???
-        override def actorSystem                                                             = ???
+        override def addToUtx(tx: Transaction): Unit        = ???
+        override def actorSystem                            = ???
       })
     }
 

@@ -17,3 +17,5 @@ Compile / run / javaOptions ++= Seq(
 )
 
 libraryDependencies += "org.scodec" %% "scodec-core" % "1.10.3"
+
+dependencyOverrides ++= Dependencies.EnforcedVersions.value
