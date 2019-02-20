@@ -297,11 +297,15 @@ lazy val node = project
   )
   .dependsOn(langJVM % "compile->compile;test->test", commonJVM % "compile->compile;test->test")
 
-///lazy val dex = project
-  .dependsOn(node % "compile->compile;runtime->provided;test->test")
-
 lazy val it = project
-  .dependsOn(node, dex)
+  .dependsOn(node)
+
+lazy val dex = project
+  .configs(IntegrationTest)
+  .dependsOn(
+    node % "compile->compile;runtime->provided;test->test",
+    it   % "it"
+  )
 
 lazy val generator = project
   .dependsOn(it)

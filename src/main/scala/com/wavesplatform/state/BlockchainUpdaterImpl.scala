@@ -643,7 +643,7 @@ class BlockchainUpdaterImpl(blockchain: LevelDBWriter,
     }
   }
 
-  override def rollbackTo(targetBlockId: AssetId): Either[String, Seq[Block]] = readLock {
+  def rollbackTo(targetBlockId: AssetId): Either[String, Seq[Block]] = readLock {
     blockchain.rollbackTo(targetBlockId)
   }
 

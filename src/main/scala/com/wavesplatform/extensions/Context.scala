@@ -2,8 +2,9 @@ package com.wavesplatform.extensions
 
 import akka.actor.ActorSystem
 import com.wavesplatform.account.Address
+import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.settings.WavesSettings
-import com.wavesplatform.state.{Blockchain, Portfolio}
+import com.wavesplatform.state.Blockchain
 import com.wavesplatform.transaction.Transaction
 import com.wavesplatform.utils.Time
 import com.wavesplatform.wallet.Wallet
@@ -14,8 +15,8 @@ trait Context {
   def blockchain: Blockchain
   def time: Time
   def wallet: Wallet
-  def portfolioChanges: Observable[Address]
-  def pessimisticPortfolio(address: Address): Portfolio
+  def balanceChanges: Observable[(Address, Option[ByteStr])]
+  def spendableBalance(address: Address, assetId: Option[ByteStr]): Long
   def addToUtx(tx: Transaction): Unit
   def actorSystem: ActorSystem
 }

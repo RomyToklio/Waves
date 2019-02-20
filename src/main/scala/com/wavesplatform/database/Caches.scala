@@ -138,9 +138,9 @@ abstract class Caches(spendableBalanceChanged: Observer[(Address, Option[AssetId
   }
 
   private val balancesCache: LoadingCache[(Address, Option[AssetId]), java.lang.Long] =
-    observedCache(maxCacheSize * 16, spendableBalanceChanged,loadBalance)
-  protected def discardBalance(key: (Address, Option[AssetId])): Unit                 = balancesCache.invalidate(key)
-  override def balance(address: Address, mayBeAssetId: Option[AssetId]): Long         = balancesCache.get(address -> mayBeAssetId)
+    observedCache(maxCacheSize * 16, spendableBalanceChanged, loadBalance)
+  protected def discardBalance(key: (Address, Option[AssetId])): Unit         = balancesCache.invalidate(key)
+  override def balance(address: Address, mayBeAssetId: Option[AssetId]): Long = balancesCache.get(address -> mayBeAssetId)
   protected def loadBalance(req: (Address, Option[AssetId])): Long
 
   private val assetDescriptionCache: LoadingCache[AssetId, Option[AssetDescription]] = cache(maxCacheSize, loadAssetDescription)

@@ -284,9 +284,8 @@ class Docker(suiteConfig: Config = empty, tag: String = "", enableProfiling: Boo
     }
 
   private def getNodeInfo(containerId: String, settings: WavesSettings): NodeInfo = {
-    val restApiPort    = settings.restAPISettings.port
-    val matcherApiPort = settings.matcherSettings.port
-    val networkPort    = settings.networkSettings.bindAddress.getPort
+    val restApiPort = settings.restAPISettings.port
+    val networkPort = settings.networkSettings.bindAddress.getPort
 
     val containerInfo = inspectContainer(containerId)
     val ports         = containerInfo.networkSettings().ports()
@@ -295,7 +294,6 @@ class Docker(suiteConfig: Config = empty, tag: String = "", enableProfiling: Boo
 
     NodeInfo(
       new URL(s"http://localhost:${extractHostPort(ports, restApiPort)}"),
-      new URL(s"http://localhost:${extractHostPort(ports, matcherApiPort)}"),
       new InetSocketAddress("localhost", extractHostPort(ports, networkPort)),
       new InetSocketAddress(wavesIpAddress, networkPort)
     )
@@ -608,15 +606,10 @@ object Docker {
   private def extractHostPort(m: JMap[String, JList[PortBinding]], containerPort: Int) =
     m.get(s"$containerPort/tcp").get(0).hostPort().toInt
 
-  case class NodeInfo(nodeApiEndpoint: URL,
-                      matcherApiEndpoint: URL,
-                      hostNetworkAddress: InetSocketAddress,
-                      containerNetworkAddress: InetSocketAddress)
+  case class NodeInfo(nodeApiEndpoint: URL, hostNetworkAddress: InetSocketAddress, containerNetworkAddress: InetSocketAddress)
 
   class DockerNode(config: Config, val containerId: String, private[Docker] var nodeInfo: NodeInfo) extends Node(config) {
     override def nodeApiEndpoint: URL = nodeInfo.nodeApiEndpoint
-
-    override def matcherApiEndpoint: URL = nodeInfo.matcherApiEndpoint
 
     override val apiKey = "integration-test-rest-api"
 

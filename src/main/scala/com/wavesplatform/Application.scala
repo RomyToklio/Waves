@@ -17,6 +17,7 @@ import com.wavesplatform.api.http._
 import com.wavesplatform.api.http.alias.{AliasApiRoute, AliasBroadcastApiRoute}
 import com.wavesplatform.api.http.assets.{AssetsApiRoute, AssetsBroadcastApiRoute}
 import com.wavesplatform.api.http.leasing.{LeaseApiRoute, LeaseBroadcastApiRoute}
+import com.wavesplatform.common.state.ByteStr
 import com.wavesplatform.consensus.PoSSelector
 import com.wavesplatform.consensus.nxt.api.http.NxtConsensusApiRoute
 import com.wavesplatform.db.openDB
@@ -271,14 +272,14 @@ class Application(val actorSystem: ActorSystem, val settings: WavesSettings, con
       val extensionClass = Class.forName(extensionClassName).asInstanceOf[Class[Extension]]
       val ctor           = extensionClass.getConstructor(classOf[Context])
       ctor.newInstance(new Context {
-        override def settings                               = ???
-        override def blockchain                             = ???
-        override def time                                   = ???
-        override def wallet                                 = ???
-        override def portfolioChanges                       = ???
-        override def pessimisticPortfolio(address: Address) = ???
-        override def addToUtx(tx: Transaction): Unit        = ???
-        override def actorSystem                            = ???
+        override def settings                                                     = ???
+        override def blockchain                                                   = ???
+        override def time                                                         = ???
+        override def wallet                                                       = ???
+        override def balanceChanges                                               = ???
+        override def spendableBalance(address: Address, assetId: Option[ByteStr]) = ???
+        override def addToUtx(tx: Transaction): Unit                              = ???
+        override def actorSystem                                                  = ???
       })
     }
 
