@@ -24,6 +24,7 @@ import org.scalamock.scalatest.PathMockFactory
 import org.scalatest._
 import org.scalatest.prop.PropertyChecks
 
+// TODO shouldBe leftOf[ErrorType]
 class OrderValidatorSpecification
     extends WordSpec
     with WithDB
@@ -34,8 +35,9 @@ class OrderValidatorSpecification
     with PropertyChecks
     with NoShrink {
 
-  private val wbtc         = mkAssetId("WBTC").get
-  private val pairWavesBtc = AssetPair(None, Some(wbtc))
+  private val wbtc          = mkAssetId("WBTC").get
+  private val pairWavesBtc  = AssetPair(None, Some(wbtc))
+  private val accountScript = ExprScript(V2, Terms.TRUE, checkSize = false).explicitGet()
 
   private val defaultPortfolio = Portfolio(0, LeaseBalance.empty, Map(wbtc -> 10 * Constants.UnitsInWave))
 
@@ -46,7 +48,7 @@ class OrderValidatorSpecification
 
     "reject new order" when {
       "this order had already been accepted" in asa(orderStatus = _ => true) { v =>
-        v shouldBe Left("Order has already been placed")
+        v should produce("OrderDuplicate")
       }
 
       "sender's address is blacklisted" in {
@@ -54,7 +56,7 @@ class OrderValidatorSpecification
         val o                  = newBuyOrder(blacklistedAccount)
 
         val v = msa(Set(blacklistedAccount.toAddress), o)
-        v(o) shouldBe Left("Invalid address")
+        v(o) should produce("AddressIsBlacklisted")
       }
 
       "v1 order from a scripted account" in forAll(accountGen) { scripted =>
@@ -63,7 +65,7 @@ class OrderValidatorSpecification
           (bc.accountScript _).when(scripted.toAddress).returns(Some(ExprScript(Terms.TRUE).explicitGet()))
           (bc.height _).when().returns(50).once()
 
-          ov(newBuyOrder(scripted)) should produce("Trading on scripted account isn't allowed yet")
+          ov(newBuyOrder(scripted)) should produce("ScriptedAccountTradingUnsupported")
         }
       }
 
@@ -73,7 +75,7 @@ class OrderValidatorSpecification
           (bc.accountScript _).when(scripted.toAddress).returns(Some(ExprScript(Terms.TRUE).explicitGet()))
           (bc.height _).when().returns(50).anyNumberOfTimes()
 
-          ov(newBuyOrder(scripted)) should produce("Trading on scripted account isn't allowed yet")
+          ov(newBuyOrder(scripted)) should produce("ScriptedAccountTradingUnsupported")
         }
       }
 
@@ -83,7 +85,7 @@ class OrderValidatorSpecification
           (bc.accountScript _).when(scripted.toAddress).returns(Some(ExprScript(Terms.FALSE).explicitGet()))
           (bc.height _).when().returns(150).anyNumberOfTimes()
 
-          ov(newBuyOrder(scripted, version = 2)) should produce("Order rejected by script")
+          ov(newBuyOrder(scripted, version = 2)) should produce("AccountScriptDeniedOrder")
         }
       }
 
@@ -92,7 +94,7 @@ class OrderValidatorSpecification
         val unsigned = newBuyOrder
         val signed   = Order.sign(unsigned.updateExpiration(tt.getTimestamp() + offset).updateSender(pk), pk)
 
-        OrderValidator.timeAware(tt)(signed) shouldBe Left("Order expiration should be > 1 min")
+        OrderValidator.timeAware(tt)(signed) should produce("WrongExpiration")
       }
 
       "amount is invalid" in {
@@ -112,13 +114,13 @@ class OrderValidatorSpecification
           case x: OrderV1 => x.copy(proofs = Proofs(Seq(ByteStr(Array.emptyByteArray))))
           case x: OrderV2 => x.copy(proofs = Proofs(Seq(ByteStr(Array.emptyByteArray))))
         }
-        ov(order) should produce("Script doesn't exist and proof doesn't validate as signature")
+        ov(order) should produce("InvalidSignature")
       }
 
       "order exists" in {
         val pk = PrivateKeyAccount(randomBytes())
         val ov = OrderValidator.accountStateAware(pk, defaultPortfolio.balanceOf, 1, _ => true)(_)
-        ov(newBuyOrder(pk, 1000)) should produce("Order has already been placed")
+        ov(newBuyOrder(pk, 1000)) should produce("OrderDuplicate")
       }
 
       "order price has invalid non-zero trailing decimals" in forAll(assetIdGen(1), accountGen, Gen.choose(1, 7)) {
@@ -178,17 +180,17 @@ class OrderValidatorSpecification
         (bc.assetScript _).when(asset1).returns(Some(denyScript))
         (bc.assetScript _).when(asset2).returns(None)
 
-        ov(o) should produce("Order rejected by script of asset")
+        ov(o) should produce("AssetScriptDeniedOrder")
       }
 
       "second asset is smart and it deny an order" when test { (ov, bc, o) =>
         (bc.assetScript _).when(asset1).returns(None)
         (bc.assetScript _).when(asset2).returns(Some(denyScript))
 
-        ov(o) should produce("Order rejected by script of asset")
+        ov(o) should produce("AssetScriptDeniedOrder")
       }
 
-      def test(f: (Order => OrderValidator.ValidationResult, Blockchain, Order) => Any): Unit = (1 to 2).foreach { version =>
+      def test(f: (Order => OrderValidator.Result[Order], Blockchain, Order) => Any): Unit = (1 to 2).foreach { version =>
         s"v$version" in portfolioTest(portfolio) { (ov, bc) =>
           val features = Seq(BlockchainFeatures.SmartAssets -> 0) ++ {
             if (version == 1) Seq.empty
@@ -217,9 +219,10 @@ class OrderValidatorSpecification
     "deny OrderV2 if SmartAccountTrading hasn't been activated yet" in forAll(accountGen) { account =>
       portfolioTest(defaultPortfolio) { (ov, bc) =>
         activate(bc, BlockchainFeatures.SmartAccountTrading -> 100)
+        (bc.accountScript _).when(account.toAddress).returns(Some(accountScript)).anyNumberOfTimes()
         (bc.height _).when().returns(0).anyNumberOfTimes()
 
-        ov(newBuyOrder(account, version = 2)) should produce("Orders of version 1 are only accepted")
+        ov(newBuyOrder(account, version = 2)) should produce("OrderVersionUnsupported")
       }
     }
 
@@ -241,7 +244,7 @@ class OrderValidatorSpecification
     }
   }
 
-  private def portfolioTest(p: Portfolio)(f: (Order => OrderValidator.ValidationResult, Blockchain) => Any): Unit = {
+  private def portfolioTest(p: Portfolio)(f: (Order => OrderValidator.Result[Order], Blockchain) => Any): Unit = {
     val bc = stub[Blockchain]
     (bc.assetScript _).when(wbtc).returns(None)
     (bc.assetDescription _).when(wbtc).returns(mkAssetDescription(8)).anyNumberOfTimes()
@@ -251,9 +254,8 @@ class OrderValidatorSpecification
   }
 
   private def validateOrderProofsTest(proofs: Seq[ByteStr]): Unit = {
-    val bc            = stub[Blockchain]
-    val pk            = PrivateKeyAccount(randomBytes())
-    val accountScript = ExprScript(V2, Terms.TRUE, checkSize = false).explicitGet()
+    val bc = stub[Blockchain]
+    val pk = PrivateKeyAccount(randomBytes())
 
     activate(bc, BlockchainFeatures.SmartAccountTrading -> 0)
     (bc.accountScript _).when(pk.toAddress).returns(Some(accountScript)).anyNumberOfTimes()
@@ -312,7 +314,7 @@ class OrderValidatorSpecification
       p: Portfolio = defaultPortfolio,
       orderStatus: ByteStr => Boolean = _ => false,
       o: Order = newBuyOrder
-  )(f: Either[String, Order] => A): A =
+  )(f: OrderValidator.Result[Order] => A): A =
     f(OrderValidator.accountStateAware(o.sender, tradableBalance(p), 0, orderStatus)(o))
 
   private def msa(ba: Set[Address], o: Order) = OrderValidator.matcherSettingsAware(o.matcherPublicKey, ba, Set.empty) _
