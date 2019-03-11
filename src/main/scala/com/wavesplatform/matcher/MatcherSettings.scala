@@ -19,6 +19,7 @@ case class MatcherSettings(enable: Boolean,
                            account: String,
                            bindAddress: String,
                            port: Int,
+                           actorResponseTimeout: FiniteDuration,
                            minOrderFee: Long,
                            orderMatchTxFee: Long,
                            dataDir: String,
@@ -60,6 +61,7 @@ object MatcherSettings {
     val account                      = config.as[String](s"$configPath.account")
     val bindAddress                  = config.as[String](s"$configPath.bind-address")
     val port                         = config.as[Int](s"$configPath.port")
+    val actorResponseTimeout         = config.as[FiniteDuration](s"$configPath.actor-response-timeout")
     val minOrderFee                  = config.as[Long](s"$configPath.min-order-fee")
     val orderMatchTxFee              = config.as[Long](s"$configPath.order-match-tx-fee")
     val dataDirectory                = config.as[String](s"$configPath.data-directory")
@@ -88,6 +90,7 @@ object MatcherSettings {
       account,
       bindAddress,
       port,
+      actorResponseTimeout,
       minOrderFee,
       orderMatchTxFee,
       dataDirectory,

@@ -18,6 +18,7 @@ class MatcherSettingsSpecification extends FlatSpec with Matchers {
         |    account = 3Mqjki7bLtMEBRCYeQis39myp9B4cnooDEX
         |    bind-address = 127.0.0.1
         |    port = 6886
+        |    actor-response-timeout = 11s
         |    min-order-fee = 100000
         |    order-match-tx-fee = 100000
         |    snapshots-interval = 999
@@ -69,6 +70,7 @@ class MatcherSettingsSpecification extends FlatSpec with Matchers {
     settings.account should be("3Mqjki7bLtMEBRCYeQis39myp9B4cnooDEX")
     settings.bindAddress should be("127.0.0.1")
     settings.port should be(6886)
+    settings.actorResponseTimeout should be(11.seconds)
     settings.minOrderFee should be(100000)
     settings.orderMatchTxFee should be(100000)
     settings.journalDataDir should be("/waves/matcher/journal")
